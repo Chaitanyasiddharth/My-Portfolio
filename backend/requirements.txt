@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+pydantic
+motor
+anthropic
+python-dotenv
+sse-starlette

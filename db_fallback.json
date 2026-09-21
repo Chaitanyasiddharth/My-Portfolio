@@ -1,0 +1,16 @@
+{
+  "test_session_123": [
+    {
+      "session_id": "test_session_123",
+      "role": "user",
+      "content": "Hello, what are your skills?",
+      "timestamp": 1787767484.677155
+    },
+    {
+      "session_id": "test_session_123",
+      "role": "assistant",
+      "content": "Hi! I am Chaitanya's virtual AI assistant. Since the EMERGENT_LLM_KEY is not configured in `.env`, I am running in demo mode.\n\nMy core skills lie in Artificial Intelligence, Machine Learning, Python, and Data Structures & Algorithms. I also build full-stack web applications using React 19, Tailwind CSS, FastAPI, and MongoDB.",
+      "timestamp": 1787767486.942181
+    }
+  ]
+}
