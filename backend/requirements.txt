@@ -5,3 +5,4 @@ motor
 anthropic
 python-dotenv
 sse-starlette
+httpx
