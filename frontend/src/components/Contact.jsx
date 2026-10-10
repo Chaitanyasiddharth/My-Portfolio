@@ -41,7 +41,7 @@ function Contact() {
     setIsSummarizing(true)
 
     try {
-      const response = await fetch('/api/summarize/stream', {
+      const response = await fetch('https://my-portfolio-backend-7v5t.onrender.com/api/summarize/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,10 +60,10 @@ function Contact() {
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
-        
+
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        
+
         // Save the incomplete last line back to buffer
         buffer = lines.pop() || ''
 
@@ -98,7 +98,7 @@ function Contact() {
 
   return (
     <div className="w-full py-24 px-6 md:px-12 bg-bg-dark radial-glow-contact relative overflow-hidden">
-      
+
       {/* Toast Alert */}
       {showToast && (
         <div className="fixed bottom-8 left-8 z-50 px-4 py-3 rounded border border-accent/20 bg-bg-dark/90 text-accent font-mono text-[10px] tracking-widest uppercase flex items-center gap-2 shadow-[0_0_20px_rgba(52,211,153,0.15)] animate-bounce">
@@ -108,14 +108,14 @@ function Contact() {
       )}
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 items-start z-10 relative">
-        
+
         {/* Left Side: Contact Info & Copy Email (5 cols) */}
         <div className="lg:col-span-5 flex flex-col items-start text-left">
-          
+
           <span className="font-mono text-xs text-accent tracking-widest uppercase block mb-4">
             // GET IN TOUCH
           </span>
-          
+
           <h2 className="font-serif text-5xl md:text-6xl text-fg-light leading-tight mb-8">
             Let's build <br />
             <span className="italic font-normal text-accent/80">something</span>.
@@ -126,7 +126,7 @@ function Contact() {
           </p>
 
           {/* Click to Copy Email Card */}
-          <div 
+          <div
             onClick={handleCopyEmail}
             className="group w-full max-w-sm rounded-xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] p-6 mb-8 cursor-pointer transition-all duration-300 hover:border-accent/20 shadow-[0_0_20px_rgba(0,0,0,0.1)] flex items-center justify-between"
           >
@@ -149,7 +149,7 @@ function Contact() {
 
           {/* Social Quick links */}
           <div className="flex flex-col gap-3 w-full max-w-sm">
-            <a 
+            <a
               href={profile.linkedin}
               target="_blank"
               rel="noopener noreferrer"
@@ -162,7 +162,7 @@ function Contact() {
               <ArrowRight size={13} className="text-fg-light/35 transform -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
             </a>
 
-            <a 
+            <a
               href={profile.github}
               target="_blank"
               rel="noopener noreferrer"
@@ -181,7 +181,7 @@ function Contact() {
         {/* Right Side: Interactive AI Resume Summarizer Pitch block (7 cols) */}
         <div className="lg:col-span-7 w-full lg:pl-8">
           <div className="rounded-xl border border-white/5 bg-white/[0.01] p-8 shadow-[0_0_50px_rgba(0,0,0,0.35)] relative">
-            
+
             <div className="flex items-center justify-between border-b border-white/10 pb-5 mb-6">
               <div className="flex items-center gap-3">
                 <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
@@ -200,16 +200,16 @@ function Contact() {
 
             {/* Input Form */}
             <form onSubmit={handleGeneratePitch} className="flex gap-2.5 mb-6">
-              <input 
-                type="text" 
-                placeholder="Enter role (e.g., ML Research Intern)..." 
+              <input
+                type="text"
+                placeholder="Enter role (e.g., ML Research Intern)..."
                 value={roleInput}
                 onChange={(e) => setRoleInput(e.target.value)}
                 disabled={isSummarizing}
                 className="flex-1 px-4 py-3 rounded-lg border border-white/10 bg-black/40 text-sm font-sans text-fg-light focus:outline-none focus:border-accent/40 disabled:opacity-50"
               />
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSummarizing || !roleInput.trim()}
                 className="px-6 py-3 rounded-lg bg-white/[0.03] border border-white/10 hover:border-accent/40 text-fg-light hover:text-accent font-mono text-xs tracking-wider transition-all duration-300 disabled:opacity-40 flex items-center gap-2"
               >
@@ -230,7 +230,7 @@ function Contact() {
                   ANALYZING ROLE & COMPILING PROFILE...
                 </div>
               )}
-              
+
               {!pitch && !isSummarizing && (
                 <div className="text-fg-light/30 font-mono text-xs italic py-6 text-center w-full">
                   Waiting for role selection...
