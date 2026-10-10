@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { MessageSquare, X, Send, Loader, Trash2, ArrowUpRight } from 'lucide-react'
 import { profile } from '../mock'
+const API_BASE_URL = "https://my-portfolio-backend-7v5t.onrender.com";
 
 function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
@@ -8,7 +9,7 @@ function ChatWidget() {
   const [inputText, setInputText] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [sessionId, setSessionId] = useState('')
-  
+
   const messagesEndRef = useRef(null)
 
   // Initialize or fetch session ID on mount
@@ -30,7 +31,7 @@ function ChatWidget() {
   // Fetch past messages from backend
   const loadHistory = async (session) => {
     try {
-      const response = await fetch(`/api/chat/history/${session}`)
+      const response = await fetch(`${API_BASE_URL}/api/chat/history/${session}`)
       if (response.ok) {
         const data = await response.json()
         if (data.history && data.history.length > 0) {
@@ -76,7 +77,7 @@ function ChatWidget() {
 
     const userMsg = inputText.trim()
     setInputText('')
-    
+
     // 1. Add user message locally
     setMessages((prev) => [...prev, { role: 'user', content: userMsg }])
     setIsTyping(true)
@@ -85,7 +86,8 @@ function ChatWidget() {
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }])
 
     try {
-      const response = await fetch('/api/chat/stream', {
+      const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
+
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +112,7 @@ function ChatWidget() {
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
-        
+
         // Keep incomplete last line in the buffer
         buffer = lines.pop() || ''
 
@@ -157,9 +159,9 @@ function ChatWidget() {
 
   return (
     <div className="fixed bottom-6 right-6 z-40 select-none">
-      
+
       {/* Floating Toggle Button */}
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-14 h-14 rounded-full bg-fg-light hover:bg-accent text-bg-dark flex items-center justify-center shadow-[0_4px_25px_rgba(52,211,153,0.25)] transition-all duration-300 transform hover:scale-105 active:scale-95 relative"
       >
@@ -176,7 +178,7 @@ function ChatWidget() {
       {/* Chat Window Panel */}
       {isOpen && (
         <div className="absolute bottom-18 right-0 w-[360px] max-w-[calc(100vw-2rem)] h-[480px] bg-bg-dark/95 backdrop-blur-md border border-white/10 rounded-xl flex flex-col overflow-hidden shadow-[0_10px_50px_rgba(0,0,0,0.6)] animate-fade-in-up">
-          
+
           {/* Header */}
           <div className="px-5 py-4 border-b border-white/5 bg-black/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -185,9 +187,9 @@ function ChatWidget() {
                 CORE_ASSISTANT
               </span>
             </div>
-            
+
             {/* Clear Chat Button */}
-            <button 
+            <button
               onClick={handleClearChat}
               title="Clear Conversation"
               className="text-fg-light/40 hover:text-red-400 transition-colors p-1.5 rounded hover:bg-white/5"
@@ -199,24 +201,22 @@ function ChatWidget() {
           {/* Messages Logs Area */}
           <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 select-text">
             {messages.map((msg, idx) => (
-              <div 
+              <div
                 key={idx}
-                className={`flex flex-col max-w-[85%] ${
-                  msg.role === 'user' ? 'self-end items-end' : 'self-start items-start'
-                }`}
+                className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'self-end items-end' : 'self-start items-start'
+                  }`}
               >
                 {/* Role label in mono */}
                 <span className="font-mono text-[8px] text-fg-light/30 tracking-widest uppercase mb-1.5">
                   {msg.role === 'user' ? 'VISITOR' : 'CLAUDE'}
                 </span>
-                
+
                 {/* Bubble content */}
-                <div 
-                  className={`px-4 py-3 rounded-lg text-xs leading-relaxed ${
-                    msg.role === 'user' 
+                <div
+                  className={`px-4 py-3 rounded-lg text-xs leading-relaxed ${msg.role === 'user'
                       ? 'bg-accent/10 border border-accent/25 text-accent rounded-tr-none'
                       : 'bg-white/[0.03] border border-white/5 text-fg-light/90 rounded-tl-none'
-                  }`}
+                    }`}
                 >
                   {msg.content || (isTyping && idx === messages.length - 1 ? (
                     <span className="inline-block w-1 h-3 bg-accent animate-cursor-blink"></span>
@@ -234,11 +234,11 @@ function ChatWidget() {
           </div>
 
           {/* Input Submission Area */}
-          <form 
+          <form
             onSubmit={handleSendMessage}
             className="p-3 border-t border-white/5 bg-black/20 flex gap-2"
           >
-            <input 
+            <input
               type="text"
               placeholder="Ask about skills, projects, background..."
               value={inputText}
@@ -246,7 +246,7 @@ function ChatWidget() {
               disabled={isTyping}
               className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-xs font-sans text-fg-light focus:outline-none focus:border-accent/40 disabled:opacity-50"
             />
-            <button 
+            <button
               type="submit"
               disabled={isTyping || !inputText.trim()}
               className="px-3.5 rounded-lg bg-fg-light text-bg-dark hover:bg-accent hover:text-bg-dark transition-all duration-300 disabled:opacity-40 flex items-center justify-center"
