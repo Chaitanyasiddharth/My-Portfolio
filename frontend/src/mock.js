@@ -1,3 +1,11 @@
+const getAcademicYearString = () => {
+  const startYear = 2024;
+  const currentDate = new Date();
+  const yearNum = currentDate.getFullYear() - startYear + (currentDate.getMonth() >= 7 ? 1 : 0);
+  const yearNames = ["First", "Second", "Third", "Fourth"];
+  return (yearNum >= 1 && yearNum <= 4) ? `${yearNames[yearNum - 1]}-year` : yearNum > 4 ? "Graduated" : "First-year";
+};
+
 export const profile = {
   name: "Chaitanya Siddharth",
   title: "AI & ML Student",
@@ -8,7 +16,7 @@ export const profile = {
   linkedinUsername: "chaitanya-siddharth-a39609321",
   github: "https://github.com/Chaitanyasiddharth",
   githubUsername: "Chaitanyasiddharth",
-  bio: "Second-year B.Tech in AI & ML at Alliance University; strong Python, DSA, and problem-solving foundation.",
+  bio: `${getAcademicYearString()} B.Tech in AI & ML at Alliance University; strong Python, DSA, and problem-solving foundation.`,
   avatarUrl: "/avatar.jpg",
   version: "1.0.0",
   availability: "Available for internships",

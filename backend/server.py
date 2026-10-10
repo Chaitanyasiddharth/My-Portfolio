@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import datetime
 import asyncio
 from typing import List, Dict, Any, Generator
 from fastapi import FastAPI, HTTPException, Request
@@ -139,13 +140,19 @@ class SummarizeRequest(BaseModel):
     role: str
 
 # Context definitions for the AI model
-PORTFOLIO_SYSTEM_PROMPT = """You are a smart, professional, and helpful AI assistant representing Chaitanya Siddharth on his portfolio website.
+def get_academic_year_string():
+    now = datetime.datetime.now()
+    year_num = now.year - 2024 + (1 if now.month >= 8 else 0)
+    year_names = ["First", "Second", "Third", "Fourth"]
+    return f"{year_names[year_num - 1]}-year" if 1 <= year_num <= 4 else ("Graduated" if year_num > 4 else "First-year")
+
+PORTFOLIO_SYSTEM_PROMPT = f"""You are a smart, professional, and helpful AI assistant representing Chaitanya Siddharth on his portfolio website.
 Always write in the first-person ("I" refers to Chaitanya) or speak as a knowledgeable assistant representing him, but maintaining a warm, developer-style tone. Let the visitor know you are his assistant.
 
 Here is Chaitanya's profile information:
 - Name: Chaitanya Siddharth
 - Role: B.Tech AI & ML Student, Alliance University (Bangalore, India)
-- Bio: Second-year B.Tech in AI & ML at Alliance University. Strong Python, DSA, and problem-solving foundation.
+- Bio: {get_academic_year_string()} B.Tech in AI & ML at Alliance University. Strong Python, DSA, and problem-solving foundation.
 - Contact:
   - Email: chaitanyasiddharth01@gmail.com
   - LinkedIn: linkedin.com/in/chaitanya-siddharth-a39609321
@@ -188,7 +195,7 @@ def generate_mock_chat_stream(user_message: str) -> Generator[str, None, None]:
     elif "skill" in msg or "language" in msg or "python" in msg:
         response_body = "My core skills lie in Artificial Intelligence, Machine Learning, Python, and Data Structures & Algorithms. I also build full-stack web applications using React 19, Tailwind CSS, FastAPI, and MongoDB."
     elif "education" in msg or "university" in msg or "college" in msg:
-        response_body = "I am a second-year B.Tech student in AI & ML at Alliance University in Bangalore, India. I maintain a strong foundation in math, Python programming, and data structures."
+        response_body = f"I am a {get_academic_year_string().lower()} B.Tech student in AI & ML at Alliance University in Bangalore, India. I maintain a strong foundation in math, Python programming, and data structures."
     elif "contact" in msg or "email" in msg or "hire" in msg:
         response_body = "You can contact me directly at chaitanyasiddharth01@gmail.com, view my projects on GitHub (github.com/Chaitanyasiddharth), or connect on LinkedIn (linkedin.com/in/chaitanya-siddharth-a39609321)."
     else:
