@@ -28,10 +28,13 @@ app.add_middleware(
 # PORT and DB setup
 PORT = int(os.getenv("PORT", 8000))
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-EMERGENT_LLM_KEY = os.getenv("EMERGENT_LLM_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("EMERGENT_LLM_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
 # Check if LLM Key is placeholder or empty
-has_real_llm_key = bool(EMERGENT_LLM_KEY and EMERGENT_LLM_KEY != "your_key_here")
+has_real_llm_key = bool(
+    GEMINI_API_KEY and GEMINI_API_KEY not in ["your_key_here", "your_gemini_api_key_here"]
+)
 
 # Initialize MongoDB client asynchronously if available
 db_connected = False
@@ -171,7 +174,7 @@ Here is Chaitanya's profile information:
   1. Smart AI Camera: Real-time object detection with bounding boxes, heatmap overlays, and neural network inference visualization.
   2. Smart Pet Collar: An interactive collar displayed on a holographic dog model, mapping heartbeat, GPS location, and stress metrics.
   3. FactCheck AI: A claim validation pipeline that passes claims through multiple verification layers to output truth scores.
-  4. Personal Portfolio Website: A dark-minimalist, editorial portfolio site featuring a React 19 frontend, FastAPI backend, and Claude AI integration.
+  4. Personal Portfolio Website: A dark-minimalist, editorial portfolio site featuring a React 19 frontend, FastAPI backend, and Gemini AI integration.
 - Certifications (tasteful placeholders, ready to update in mock.js):
   - Python for Data Science
   - Machine Learning Fundamentals
@@ -185,7 +188,6 @@ Guidelines:
 """
 
 def generate_mock_chat_stream(user_message: str) -> Generator[str, None, None]:
-    intro = "[DEMO MODE] Hi! I am Chaitanya's virtual AI assistant. Since the EMERGENT_LLM_KEY is not configured in `.env`, I am running in demo mode.\n\n"
     response_body = ""
     
     # Simple rule-based mock responses based on user query keywords
@@ -201,7 +203,7 @@ def generate_mock_chat_stream(user_message: str) -> Generator[str, None, None]:
     else:
         response_body = "Thank you for visiting! I am a B.Tech AI & ML student at Alliance University, Bangalore. I specialize in Python, ML research, and full-stack development. Feel free to ask me about my projects, education, or skills!"
         
-    full_text = intro + response_body
+    full_text = response_body
     # Stream word-by-word to simulate SSE
     words = full_text.split(" ")
     for i, word in enumerate(words):
@@ -211,11 +213,11 @@ def generate_mock_chat_stream(user_message: str) -> Generator[str, None, None]:
     yield "data: [DONE]\n\n"
 
 def generate_mock_summarize_stream(role: str) -> Generator[str, None, None]:
-    p1 = f"Paragraph 1: For a **{role}** position, my background as an AI & ML student at Alliance University provides a perfect academic and practical foundation. Having rigorous training in Python, Machine Learning, and Data Structures, I am quick to grasp complex technical requirements and implement robust solutions."
-    p2 = "Paragraph 2: My projects, such as the Smart AI Camera and FactCheck AI, demonstrate my capability in handling live data streams, designing complex pipeline architectures, and working with modern machine learning models. I bring hands-on building experience that bridges the gap between academic theory and production systems."
-    p3 = "Paragraph 3: I am driven by curiosity, a problem-solving mindset, and the ambition of a future founder. I am eager to apply my skills to your team as an intern, adapting quickly to your workflows and delivering high-quality contributions from day one."
+    p1 = f"For a **{role}** position, my background as an AI & ML student at Alliance University provides a strong academic and practical foundation. Having rigorous training in Python, Machine Learning, and Data Structures, I am quick to grasp complex technical requirements and implement robust solutions."
+    p2 = "My projects, such as the Smart AI Camera and FactCheck AI, demonstrate my capability in handling live data streams, designing complex pipeline architectures, and working with modern machine learning models. I bring hands-on building experience that bridges the gap between academic theory and production systems."
+    p3 = "I am driven by curiosity, a problem-solving mindset, and the ambition of a future founder. I am eager to apply my skills to your team as an intern, adapting quickly to your workflows and delivering high-quality contributions from day one."
     
-    full_text = f"[DEMO MODE - Resume Pitch for {role}]\n\n{p1}\n\n{p2}\n\n{p3}"
+    full_text = f"{p1}\n\n{p2}\n\n{p3}"
     words = full_text.split(" ")
     for i, word in enumerate(words):
         space = " " if i < len(words) - 1 else ""
@@ -242,46 +244,48 @@ async def chat_stream(request: ChatRequest):
                         pass
                 yield frame
             # Save the full reply to DB
-            await save_message_to_db(request.session_id, "assistant", full_reply.replace("[DEMO MODE] ", ""))
+            await save_message_to_db(request.session_id, "assistant", full_reply)
             
         return StreamingResponse(mock_generator(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"})
 
-    # Real LLM integration (using standard HTTP request to Claude to ensure stability)
-    async def claude_generator():
+    # Real LLM integration (using standard HTTP streaming request to Google Gemini API)
+    async def gemini_generator():
         # Load conversation history
         history = await get_history_from_db(request.session_id)
         
-        # Build messages payload for Anthropic API
-        messages = []
-        # Anthropic messages must alternate User/Assistant and start with User
+        # Build contents payload for Gemini API
+        contents = []
         for h in history[:-1]:  # exclude the last message we just saved to DB, we'll append it manually
-            if h["role"] in ["user", "assistant"]:
-                messages.append({"role": h["role"], "content": h["content"]})
+            if h.get("role") in ["user", "assistant", "model"]:
+                role = "model" if h.get("role") in ["assistant", "model"] else "user"
+                contents.append({"role": role, "parts": [{"text": h.get("content", "")}]})
                 
         # Append latest user message
-        messages.append({"role": "user", "content": request.message})
+        contents.append({"role": "user", "parts": [{"text": request.message}]})
         
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:streamGenerateContent?alt=sse&key={GEMINI_API_KEY}"
         headers = {
-            "x-api-key": EMERGENT_LLM_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
+            "Content-Type": "application/json"
         }
         
         payload = {
-            "model": "claude-3-5-sonnet-20241022", # Standard high-performance model
-            "system": PORTFOLIO_SYSTEM_PROMPT,
-            "messages": messages,
-            "max_tokens": 1024,
-            "stream": True
+            "system_instruction": {
+                "parts": [{"text": PORTFOLIO_SYSTEM_PROMPT}]
+            },
+            "contents": contents,
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 1024
+            }
         }
         
         full_assistant_reply = ""
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                async with client.stream("POST", "https://api.anthropic.com/v1/messages", headers=headers, json=payload) as response:
+                async with client.stream("POST", url, headers=headers, json=payload) as response:
                     if response.status_code != 200:
                         error_detail = await response.aread()
-                        yield f"data: [ERROR] Anthropic API returned status {response.status_code}: {error_detail.decode()}\n\n"
+                        yield f"data: [ERROR] Gemini API returned status {response.status_code}: {error_detail.decode()}\n\n"
                         yield "data: [DONE]\n\n"
                         return
 
@@ -292,12 +296,16 @@ async def chat_stream(request: ChatRequest):
                                 continue
                             try:
                                 event = json.loads(line_data)
-                                if event.get("type") == "content_block_delta":
-                                    token = event["delta"].get("text", "")
-                                    full_assistant_reply += token
-                                    yield f"data: {json.dumps({'token': token})}\n\n"
+                                candidates = event.get("candidates", [])
+                                if candidates:
+                                    parts = candidates[0].get("content", {}).get("parts", [])
+                                    for p in parts:
+                                        token = p.get("text", "")
+                                        if token:
+                                            full_assistant_reply += token
+                                            yield f"data: {json.dumps({'token': token})}\n\n"
                             except Exception as e:
-                                print(f"Error parsing SSE line: {e}")
+                                print(f"Error parsing Gemini SSE line: {e}")
                                 
             # Save the final reply to the DB
             await save_message_to_db(request.session_id, "assistant", full_assistant_reply)
@@ -307,7 +315,7 @@ async def chat_stream(request: ChatRequest):
             yield f"data: [ERROR] Internal connection error: {str(e)}\n\n"
             yield "data: [DONE]\n\n"
 
-    return StreamingResponse(claude_generator(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"})
+    return StreamingResponse(gemini_generator(), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"})
 
 # Endpoint: Conversation History
 @app.get("/api/chat/history/{session_id}")
@@ -321,14 +329,8 @@ async def summarize_stream(request: SummarizeRequest):
     if not has_real_llm_key:
         return StreamingResponse(generate_mock_summarize_stream(request.role), media_type="text/event-stream", headers={"X-Accel-Buffering": "no"})
 
-    # Call Claude for a custom pitch
+    # Call Gemini for a custom pitch
     async def pitch_generator():
-        headers = {
-            "x-api-key": EMERGENT_LLM_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json"
-        }
-        
         summarize_system = """You are an AI assistant designed to draft custom resume pitches for Chaitanya Siddharth.
 Based on the job role typed by the visitor, you will write a highly compelling 3-paragraph pitch demonstrating why Chaitanya is a great fit.
 
@@ -339,20 +341,33 @@ Format:
 
 Tone: Warm, confident, and professional. Write in the first person ("I"). Keep it concise and highly persuasive."""
 
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:streamGenerateContent?alt=sse&key={GEMINI_API_KEY}"
+        headers = {
+            "Content-Type": "application/json"
+        }
+
         payload = {
-            "model": "claude-3-5-sonnet-20241022",
-            "system": summarize_system,
-            "messages": [{"role": "user", "content": f"Generate a tailored elevator pitch for a {request.role} role."}],
-            "max_tokens": 1024,
-            "stream": True
+            "system_instruction": {
+                "parts": [{"text": summarize_system}]
+            },
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": f"Generate a tailored elevator pitch for a {request.role} role."}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 1024
+            }
         }
         
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                async with client.stream("POST", "https://api.anthropic.com/v1/messages", headers=headers, json=payload) as response:
+                async with client.stream("POST", url, headers=headers, json=payload) as response:
                     if response.status_code != 200:
                         error_detail = await response.aread()
-                        yield f"data: [ERROR] Anthropic API returned status {response.status_code}: {error_detail.decode()}\n\n"
+                        yield f"data: [ERROR] Gemini API returned status {response.status_code}: {error_detail.decode()}\n\n"
                         yield "data: [DONE]\n\n"
                         return
 
@@ -363,11 +378,15 @@ Tone: Warm, confident, and professional. Write in the first person ("I"). Keep i
                                 continue
                             try:
                                 event = json.loads(line_data)
-                                if event.get("type") == "content_block_delta":
-                                    token = event["delta"].get("text", "")
-                                    yield f"data: {json.dumps({'token': token})}\n\n"
+                                candidates = event.get("candidates", [])
+                                if candidates:
+                                    parts = candidates[0].get("content", {}).get("parts", [])
+                                    for p in parts:
+                                        token = p.get("text", "")
+                                        if token:
+                                            yield f"data: {json.dumps({'token': token})}\n\n"
                             except Exception as e:
-                                print(f"Error parsing SSE line: {e}")
+                                print(f"Error parsing Gemini SSE line: {e}")
                                 
             yield "data: [DONE]\n\n"
             
@@ -384,7 +403,7 @@ async def get_status():
         "mongodb_connected": db_connected,
         "llm_configured": has_real_llm_key,
         "storage_mode": "MongoDB" if db_connected else "Local JSON Fallback File",
-        "llm_mode": "Anthropic Claude Live" if has_real_llm_key else "Simulated Developer Agent (Demo Mode)"
+        "llm_mode": f"Google Gemini Live ({GEMINI_MODEL})" if has_real_llm_key else "Simulated Developer Agent (Demo Mode)"
     }
 
 if __name__ == "__main__":
