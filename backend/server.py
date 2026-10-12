@@ -280,15 +280,15 @@ async def chat_stream(request: ChatRequest):
         }
         
         full_assistant_reply = ""
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                async with client.stream("POST", url, headers=headers, json=payload) as response:
-                    
+        
             if response.status_code != 200:
                 error_detail = await response.aread()
-                print(f"Gemini API error {response.status_code}: {error_detail.decode('utf-8', errors='replace')}")
-                yield f"data: [ERROR] Gemini API returned status {response.status_code}: {error_detail.decode('utf-8', errors='replace')}\n\n"
+                error_text = error_detail.decode("utf-8", errors="replace")
+                print(f"Gemini API error {response.status_code}: {error_text}")
+                yield f"data: [ERROR] Gemini API returned status {response.status_code}: {error_text}\n\n"
                 yield "data: [DONE]\n\n"
+                return
+
                 return
 
                         yield "data: [DONE]\n\n"
